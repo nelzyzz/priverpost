@@ -1,36 +1,45 @@
-const axios = require('axios');
+const { callGeminiAPI } = require('../utils/callGeminiAPI');
 
 module.exports = {
-  name: 'claude3',
-  description: 'Ask a question to Claude-3 AI',
-  author: 'Deku (rest api)',
+  name: 'gpt4o',
+  description: 'Pose une question à plusieurs services AI et obtient la réponse la plus rapide.',
+  author: 'ChatGPT',
   async execute(senderId, args, pageAccessToken, sendMessage) {
     const prompt = args.join(' ');
 
     try {
-      const apiUrl = `https://deku-rest-api-3ijr.onrender.com/api/claude-3?q=${encodeURIComponent(prompt)}`;
-      const response = await axios.get(apiUrl);
+      // Message pour indiquer que Gemini est en train de répondre
+      const waitingMessage = {
+        text: '💬 multyAi est en train de te répondre⏳...\n\n─────★─────'
+      };
+      await sendMessage(senderId, waitingMessage, pageAccessToken);
 
-      // Extracting relevant data from the response
-      const { respond, author } = response.data;
+      // Appel à l'API Gemini
+      const response = await callGeminiAPI(prompt);
 
-      // Split the response into chunks if it exceeds 2000 characters
+      // Créer un style avec un contour pour la réponse de Gemini
+      const formattedResponse = `─────★─────\n` +
+                                `✨ multy Ai 🤖🇲🇬\n\n${response}\n` +
+                                `─────★─────`;
+
+      // Gérer les réponses de plus de 2000 caractères
       const maxMessageLength = 2000;
-      if (respond.length > maxMessageLength) {
-        const chunks = splitMessageIntoChunks(respond, maxMessageLength);
-        chunks.forEach(chunk => {
-          sendMessage(senderId, { text: chunk }, pageAccessToken);
-        });
+      if (formattedResponse.length > maxMessageLength) {
+        const messages = splitMessageIntoChunks(formattedResponse, maxMessageLength);
+        for (const message of messages) {
+          await sendMessage(senderId, { text: message }, pageAccessToken);
+        }
       } else {
-        sendMessage(senderId, { text: respond }, pageAccessToken);
+        await sendMessage(senderId, { text: formattedResponse }, pageAccessToken);
       }
     } catch (error) {
-      console.error('Error calling Claude-3 API:', error);
-      sendMessage(senderId, { text: 'Sorry, there was an error processing your request.' }, pageAccessToken);
+      console.error('Error calling Gemini API:', error);
+      await sendMessage(senderId, { text: 'Une erreur est survenue.' }, pageAccessToken);
     }
   }
 };
 
+// Fonction pour découper les messages en morceaux de 2000 caractères
 function splitMessageIntoChunks(message, chunkSize) {
   const chunks = [];
   for (let i = 0; i < message.length; i += chunkSize) {
