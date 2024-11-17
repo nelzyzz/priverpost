@@ -3,31 +3,31 @@ const path = require('path');
 
 module.exports = {
   name: 'help',
-  description: 'Afficher les commandes disponibles',
+  description: 'Display available commands',
   author: 'System',
   execute(senderId, args, pageAccessToken, sendMessage) {
     try {
       const commandsDir = path.join(__dirname, '../commands');
 
-      // Vérifie si le répertoire existe avant de lire son contenu
+      // Check if the directory exists before reading its content
       if (!fs.existsSync(commandsDir)) {
-        return sendMessage(senderId, { text: 'Le répertoire des commandes n\'existe pas.' }, pageAccessToken);
+        return sendMessage(senderId, { text: 'The commands directory does not exist.' }, pageAccessToken);
       }
 
       const commandFiles = fs.readdirSync(commandsDir).filter(file => file.endsWith('.js'));
 
-      // Vérifie s'il y a des fichiers dans le répertoire
+      // Check if there are files in the directory
       if (commandFiles.length === 0) {
-        return sendMessage(senderId, { text: 'Aucune commande disponible.' }, pageAccessToken);
+        return sendMessage(senderId, { text: 'No commands available.' }, pageAccessToken);
       }
 
       const commands = commandFiles.map(file => {
         try {
           const command = require(path.join(commandsDir, file));
 
-          // Vérifie que la commande a bien un nom et une description
+          // Verify that the command has both a name and a description
           if (!command.name || !command.description) {
-            return `❌ La commande dans le fichier ${file} est invalide.`;
+            return `❌ The command in file ${file} is invalid.`;
           }
 
           return `
@@ -35,25 +35,25 @@ module.exports = {
 │⇨  Description : ${command.description}
 `;
         } catch (err) {
-          console.error(`Erreur lors du chargement de la commande ${file}:`, err);
-          return `❌ Erreur lors du chargement de la commande ${file}.`;
+          console.error(`Error loading command ${file}:`, err);
+          return `❌ Error loading command ${file}.`;
         }
       });
 
       const totalCommands = commandFiles.length;
       const helpMessage = `
 ╭──────✯──────╮
-│🇲🇬 Commandes Disponibles 📜 
+│🇲🇬 Available Commands 📜 
 ├───────♨──────
 ${commands.join('─────★─────\n')}
-│ 📌 Nombre total de commandes : ${totalCommands}  │
-│ 💡 Utilisez le nom de la commande pour plus de détails ! │
+│ 📌 Total number of commands: ${totalCommands}  │
+│ 💡 Use the command name for more details! │
 ╰──────✨──────╯`;
 
       sendMessage(senderId, { text: helpMessage }, pageAccessToken);
     } catch (error) {
-      console.error('Erreur lors de l\'exécution de la commande help:', error);
-      sendMessage(senderId, { text: 'Une erreur est survenue lors de l\'affichage des commandes.' }, pageAccessToken);
+      console.error('Error executing the help command:', error);
+      sendMessage(senderId, { text: 'An error occurred while displaying the commands.' }, pageAccessToken);
     }
   }
 };
