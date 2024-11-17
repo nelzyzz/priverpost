@@ -4,39 +4,39 @@ const path = require('path');
 
 module.exports = {
   name: 'gemini',
-  description: 'Chat avec Gemini ou génère une image',
+  description: 'Chat with Gemini or generate an image',
   author: 'vex_kshitiz',
 
   async execute(senderId, args, pageAccessToken, sendMessage, event = null) {
     const prompt = args.join(' ').trim();
 
-    // Vérifie si une image est envoyée directement dans le message
+    // Check if an image is directly attached in the message
     if (event?.attachments?.length > 0) {
       try {
-        // Si une image est envoyée, la décrire automatiquement
+        // If an image is attached, describe it automatically
         const photoUrl = event.attachments[0].url;
-        const description = await describeImage(prompt || "Décris cette image", photoUrl);
+        const description = await describeImage(prompt || "Describe this image", photoUrl);
         const formattedResponse = `👩‍💻 | 𝙶𝚎𝚖𝚒𝚗𝚒 |\n━━━━━━━━━━━━━━━━\nDescription: ${description}\n━━━━━━━━━━━━━━━━`;
         await sendMessage(senderId, { text: formattedResponse }, pageAccessToken);
       } catch (error) {
-        console.error('Erreur lors de la description de l’image:', error);
-        await sendMessage(senderId, { text: 'Désolé, une erreur est survenue lors de la description de l’image.' }, pageAccessToken);
+        console.error('Error while describing the image:', error);
+        await sendMessage(senderId, { text: 'Sorry, an error occurred while describing the image.' }, pageAccessToken);
       }
       return;
     }
 
     if (!prompt) {
-      return sendMessage(senderId, { text: "👩‍💻 | 𝙶𝚎𝚖𝚒𝚗𝚒 |\n━━━━━━━━━━━━━━━━\nVeuillez fournir un prompt ou envoyer une image.\n━━━━━━━━━━━━━━━━" }, pageAccessToken);
+      return sendMessage(senderId, { text: "👩‍💻 | 𝙶𝚎𝚖𝚒𝚗𝚒 |\n━━━━━━━━━━━━━━━━\nPlease provide a prompt or send an image.\n━━━━━━━━━━━━━━━━" }, pageAccessToken);
     }
 
     try {
       if (args[0]?.toLowerCase() === "draw") {
-        // Générer une image
-        await sendMessage(senderId, { text: '💬 *Gemini est en train de générer une image* ⏳...\n\n─────★─────' }, pageAccessToken);
+        // Generate an image
+        await sendMessage(senderId, { text: '💬 *Gemini is generating an image* ⏳...\n\n─────★─────' }, pageAccessToken);
 
         const imageUrl = await generateImage(prompt);
 
-        // Téléchargement de l'image générée
+        // Download the generated image
         const imagePath = path.join(__dirname, 'cache', `image_${Date.now()}.png`);
         const writer = fs.createWriteStream(imagePath);
         const { data } = await axios({ url: imageUrl, method: 'GET', responseType: 'stream' });
@@ -47,18 +47,18 @@ module.exports = {
           writer.on('error', reject);
         });
 
-        // Envoyer l'image générée
+        // Send the generated image
         await sendMessage(senderId, {
-          text: '👩‍💻 | 𝙶𝚎𝚖𝚒𝚗𝚒 |\n━━━━━━━━━━━━━━━━\nImage générée :',
+          text: '👩‍💻 | 𝙶𝚎𝚖𝚒𝚗𝚒 |\n━━━━━━━━━━━━━━━━\nGenerated image:',
           attachment: fs.createReadStream(imagePath)
         }, pageAccessToken);
       } else {
-        // Obtenir une réponse textuelle
-        await sendMessage(senderId, { text: '💬 *Gemini est en train de te répondre* ⏳...\n\n─────★─────' }, pageAccessToken);
+        // Get a text response
+        await sendMessage(senderId, { text: '💬 *Gemini is preparing a response* ⏳...\n\n─────★─────' }, pageAccessToken);
         const response = await getTextResponse(prompt, senderId);
         const formattedResponse = `─────★─────\n✨ Gemini 🤖\n\n${response}\n─────★─────`;
 
-        // Gérer les réponses longues
+        // Handle long responses
         const maxMessageLength = 2000;
         if (formattedResponse.length > maxMessageLength) {
           const messages = splitMessageIntoChunks(formattedResponse, maxMessageLength);
@@ -70,33 +70,33 @@ module.exports = {
         }
       }
     } catch (error) {
-      console.error('Erreur lors de l’appel API Gemini:', error);
-      await sendMessage(senderId, { text: 'Désolé, une erreur est survenue. Veuillez réessayer plus tard.' }, pageAccessToken);
+      console.error('Error during Gemini API call:', error);
+      await sendMessage(senderId, { text: 'Sorry, an error occurred. Please try again later.' }, pageAccessToken);
     }
   }
 };
 
-// Fonction pour obtenir une description d'image via l'API
+// Function to describe an image using the API
 async function describeImage(prompt, photoUrl) {
   try {
-    const { data } = await axios.get(`https://sandipbaruwal.onrender.com/gemini2?prompt=${encodeURIComponent(prompt)}&url=${encodeURIComponent(photoUrl)}`);
+    const { data } = await axios.get(`https://joshweb.click/gemini?prompt=${encodeURIComponent(prompt)}&url=${encodeURIComponent(photoUrl)}`);
     return data.answer;
   } catch (error) {
-    throw new Error('Erreur lors de la description de l’image');
+    throw new Error('Error while describing the image');
   }
 }
 
-// Fonction pour obtenir une réponse textuelle via l'API
+// Function to get a textual response via the API
 async function getTextResponse(prompt, senderId) {
   try {
-    const { data } = await axios.get(`https://gemini-ai-pearl-two.vercel.app/kshitiz?prompt=${encodeURIComponent(prompt)}&uid=${senderId}&apikey=kshitiz`);
+    const { data } = await axios.get(`https://joshweb.click/new/gemini?prompt=${encodeURIComponent(prompt)}&uid=${senderId}&apikey=kshitiz`);
     return data.answer;
   } catch (error) {
-    throw new Error('Erreur lors de l’appel API Gemini pour la réponse textuelle');
+    throw new Error('Error during Gemini API text response call');
   }
 }
 
-// Fonction pour découper les messages trop longs
+// Function to split long messages into chunks
 function splitMessageIntoChunks(message, chunkSize) {
   const chunks = [];
   for (let i = 0; i < message.length; i += chunkSize) {
@@ -105,12 +105,12 @@ function splitMessageIntoChunks(message, chunkSize) {
   return chunks;
 }
 
-// Fonction pour générer une image
+// Function to generate an image
 async function generateImage(prompt) {
   try {
-    const { data } = await axios.get(`https://sdxl-kshitiz.onrender.com/gen?prompt=${encodeURIComponent(prompt)}&style=3`);
+    const { data } = await axios.get(`https://joshweb.click/api/flux?prompt=${encodeURIComponent(prompt)}&style=3`);
     return data.url;
   } catch (error) {
-    throw new Error('Erreur lors de la génération de l’image');
+    throw new Error('Error while generating the image');
   }
 }
